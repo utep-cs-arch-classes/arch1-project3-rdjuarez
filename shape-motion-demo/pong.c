@@ -11,6 +11,8 @@
 AbRect left_paddle = {abRectGetBounds, abRectCheck,{5,18}};
 AbRect right_paddle = {abRectGetBounds, abRectCheck,{5,18}};
 
+char p1_score, p2_score = 0;
+
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
   {screenWidth/2 - 10, screenHeight/2 - 10}
@@ -106,7 +108,7 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers){
  *  \param fence The region which will serve as a boundary for ml
  */
 
-int collision_detector(MovLayer *moving_layer, Vec2 *newPos, u_int axis){
+int collision_detector(Vec2 *newPos, u_int axis){
 
   int velocity2 = 0;
 
@@ -114,10 +116,9 @@ int collision_detector(MovLayer *moving_layer, Vec2 *newPos, u_int axis){
   if(abShapeCheck(ml1.layer->abShape,&ml1.layer->posNext, newPos) ||
      (abShapeCheck(ml2.layer->abShape,&ml2.layer->posNext, newPos))){
 
-    //change the volocity of the ball to its opposite
+    //change the volocity of the ball to the opposite velocity
     velocity2 = ml0.velocity.axes[axis] = -ml0.velocity.axes[axis];
     return velocity2;
-
   }
 }
 
@@ -126,8 +127,7 @@ void mlAdvance(MovLayer *ml, Region *fence)
   Vec2 newPos;
   u_char axis;
   Region shapeBoundary;
-  int check_score;
-  
+   
   for (; ml; ml = ml->next) {
 
     vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
@@ -135,21 +135,31 @@ void mlAdvance(MovLayer *ml, Region *fence)
 
     for (axis = 0; axis < 2; axis ++) {
 
-      //checks collision between figures and fence
-      if ((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis]) ||
-	  (shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis]) ) {
-
+      //checks collision between figures and fence, separated for score porpuses
+      if ((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis])){
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
+
+	//update score
+	p1_score +=1;
+      }
+      
+      //checks collision between figures and fence, separated for score porpuses
+      else if((shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis])) {
+	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
+	newPos.axes[axis] += (2*velocity);
+
+	//update score
+	p2_score +=1;
       }
       
       /*Checks for collision between the ball and the paddles, in order to do so
 	it checks if the ball shape equals to the actual moving layer, so it can collide */
       if (ml->layer->abShape == ml0.layer->abShape){
-	int velocity = collision_detector(ml,&newPos,axis);
+	int velocity = collision_detector(&newPos,axis);
 	newPos.axes[axis] += (2*velocity);
       }
-     
+      
     ml->layer->posNext = newPos; //advance to the next layer
     }
   }
