@@ -33,7 +33,50 @@ WDT:
 	PUSH	R5
 	PUSH	R4
 	; end of prologue
-	CALL	#wdt_c_handler
+wdt_handler.s:	sub #6, 0r1
+	MOV #0, r12
+	BIS sr, &P1OUT
+	ADD #1, r13
+loop:
+	CMP #15, r13
+	JNE done
+	MOV &ml2. r12
+	MOV &fieldFence, r13
+	CALL #mlAdvance
+	CALL #p2sw_read
+	ADD r14, 0(r1)		;int switches = ~p2sw_read()
+	CMP 0(r1), BIT0
+	JNE else
+	SUB #3, 0(r12)
+	JMP update
+
+	CMP 0(r1), BIT1
+	JNE else
+	ADD #3, 0(r12)
+	JMP update
+
+	CMP 0(r1), BIT2
+	JNE else
+	ADD #3, 0(r13)
+	JMP update
+
+	CMP 0(r1), BIT3
+	JNE else
+	SUB #3, 0(r13)
+	JMP update
+else:
+	MOV #0, 0(r12)
+	MOV #0, 0(r13)
+	JMP loop
+update:
+	ADD #1, r15		;redrawScreen
+	MOV #0, r12
+	JMP loop
+done:
+	BIC sr
+	AND sr, &P1OUT
+	ADD #6, r1
+	pop r0
 	; start of epilogue
 	POP	R4
 	POP	R5
